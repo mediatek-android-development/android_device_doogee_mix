@@ -1,0 +1,99 @@
+From 7ca1f5c3fe71d8820e984edf9f1cfeba8b966724 Mon Sep 17 00:00:00 2001
+From: hyperion70 <bmaximov71@gmail.com>
+Date: Wed, 24 Apr 2019 18:47:23 +0300
+Subject: [PATCH] frameworks_av
+
+Change-Id: Ie6dae05a3b594866f8b8cf06a3250043f7cbf378
+---
+ media/libmedia/Android.mk         |  3 ++-
+ media/libmedia/vtservice.cpp      | 24 ++++++++++++++++++++++++
+ services/audioflinger/Threads.cpp | 28 ++++++++++++++--------------
+ 3 files changed, 40 insertions(+), 15 deletions(-)
+ create mode 100644 media/libmedia/vtservice.cpp
+
+diff --git a/media/libmedia/Android.mk b/media/libmedia/Android.mk
+index df4e4b6..ac7185b 100644
+--- a/media/libmedia/Android.mk
++++ b/media/libmedia/Android.mk
+@@ -73,7 +73,8 @@ LOCAL_SRC_FILES:= \
+     Visualizer.cpp \
+     MemoryLeakTrackUtil.cpp \
+     StringArray.cpp \
+-    AudioPolicy.cpp
++    AudioPolicy.cpp \
++    vtservice.cpp
+ 
+ LOCAL_SHARED_LIBRARIES := \
+ 	libui liblog libcutils libutils libbinder libsonivox libicuuc libicui18n libexpat \
+diff --git a/media/libmedia/vtservice.cpp b/media/libmedia/vtservice.cpp
+new file mode 100644
+index 0000000..cdb0a59
+--- /dev/null
++++ b/media/libmedia/vtservice.cpp
+@@ -0,0 +1,24 @@
++/*
++ * Copyright (C) 2018 Tobias Tefke
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++extern "C" {
++     void _ZN7android12AudioPCMxWayD1Ev() {}
++     void _ZN7android12AudioPCMxWayC1EiPFviPvS1_ES1_() {}
++     void _ZN7android12AudioPCMxWay5startEv() {}
++     void _ZN7android12AudioPCMxWay4stopEv() {}
++     void _ZN7android12AudioPCMxWay4readEPvj() {}
++     void _ZN7android14FindAVCSPSInfoEPhjPNS_7SPSInfoE() {}
++}
+diff --git a/services/audioflinger/Threads.cpp b/services/audioflinger/Threads.cpp
+index 5c37263..59165cb 100644
+--- a/services/audioflinger/Threads.cpp
++++ b/services/audioflinger/Threads.cpp
+@@ -6466,20 +6466,20 @@ reacquire_wakelock:
+         mTimestamp.mTimeNs[ExtendedTimestamp::LOCATION_SERVER] = systemTime();
+ 
+         // Update server timestamp with kernel stats
+-        if (mInput->stream->get_capture_position != nullptr
+-                && mPipeSource.get() == nullptr /* don't obtain for FastCapture, could block */) {
+-            int64_t position, time;
+-            int ret = mInput->stream->get_capture_position(mInput->stream, &position, &time);
+-            if (ret == NO_ERROR) {
+-                mTimestamp.mPosition[ExtendedTimestamp::LOCATION_KERNEL] = position;
+-                mTimestamp.mTimeNs[ExtendedTimestamp::LOCATION_KERNEL] = time;
+-                // Note: In general record buffers should tend to be empty in
+-                // a properly running pipeline.
+-                //
+-                // Also, it is not advantageous to call get_presentation_position during the read
+-                // as the read obtains a lock, preventing the timestamp call from executing.
+-            }
+-        }
++//        if (mInput->stream->get_capture_position != nullptr
++//                && mPipeSource.get() == nullptr /* don't obtain for FastCapture, could block */) {
++//           int64_t position, time;
++//            int ret = mInput->stream->get_capture_position(mInput->stream, &position, &time);
++//            if (ret == NO_ERROR) {
++//                mTimestamp.mPosition[ExtendedTimestamp::LOCATION_KERNEL] = position;
++//                mTimestamp.mTimeNs[ExtendedTimestamp::LOCATION_KERNEL] = time;
++//                // Note: In general record buffers should tend to be empty in
++//                // a properly running pipeline.
++//                //
++//                // Also, it is not advantageous to call get_presentation_position during the read
++//                // as the read obtains a lock, preventing the timestamp call from executing.
++//            }
++//        }
+         // Use this to track timestamp information
+         // ALOGD("%s", mTimestamp.toString().c_str());
+ 
+-- 
+2.7.4
+

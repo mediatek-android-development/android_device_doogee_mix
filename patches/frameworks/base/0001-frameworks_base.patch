@@ -1,0 +1,195 @@
+From fe32d431c8ea24c30d0c80aa127cd4e55947fe6d Mon Sep 17 00:00:00 2001
+From: hyperion70 <bmaximov71@gmail.com>
+Date: Wed, 24 Apr 2019 18:47:58 +0300
+Subject: [PATCH] frameworks_base
+
+Change-Id: I612cbf391829de00f6f12657e81497efb20506d8
+---
+ core/jni/fd_utils-inl.h                |  1 +
+ libs/hwui/Android.mk                   |  7 +++
+ libs/hwui/mediatek/MTKProgramAtlas.cpp | 45 +++++++++++++++++
+ libs/hwui/mediatek/MTKProgramAtlas.h   | 90 ++++++++++++++++++++++++++++++++++
+ 4 files changed, 143 insertions(+)
+ create mode 100644 libs/hwui/mediatek/MTKProgramAtlas.cpp
+ create mode 100644 libs/hwui/mediatek/MTKProgramAtlas.h
+
+diff --git a/core/jni/fd_utils-inl.h b/core/jni/fd_utils-inl.h
+index a68a602..c6fc508 100644
+--- a/core/jni/fd_utils-inl.h
++++ b/core/jni/fd_utils-inl.h
+@@ -58,6 +58,7 @@ static const char* kPathWhitelist[] = {
+   "/dev/urandom",
+   "/dev/ion",
+   "/dev/dri/renderD129", // Fixes b/31172436
++  "/proc/ged", // MTK add
+   "/system/framework/org.cyanogenmod.platform-res.apk",
+ #ifdef PATH_WHITELIST_EXTRA_H
+ PATH_WHITELIST_EXTRA_H
+diff --git a/libs/hwui/Android.mk b/libs/hwui/Android.mk
+index cacfce1..acabdf9 100644
+--- a/libs/hwui/Android.mk
++++ b/libs/hwui/Android.mk
+@@ -136,6 +136,13 @@ ifeq (true, $(HWUI_NEW_OPS))
+ 
+ endif
+ 
++# --- MediaTek ---------------------------------------------------------------
++
++hwui_src_files += \
++    mediatek/MTKProgramAtlas.cpp
++
++# ----------------------------------------------------------------------------
++
+ ifeq (true, $(BUGREPORT_FONT_CACHE_USAGE))
+     hwui_src_files += \
+         font/FontCacheHistoryTracker.cpp
+diff --git a/libs/hwui/mediatek/MTKProgramAtlas.cpp b/libs/hwui/mediatek/MTKProgramAtlas.cpp
+new file mode 100644
+index 0000000..c4be97f
+--- /dev/null
++++ b/libs/hwui/mediatek/MTKProgramAtlas.cpp
+@@ -0,0 +1,45 @@
++/*
++ * Copyright (C) 2018 Tobias Tefke
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++
++#include <binder/IPCThreadState.h>
++#include <binder/ProcessState.h>
++#include <binder/IServiceManager.h>
++#include <utils/Log.h>
++#include <fcntl.h>
++
++#include "MTKProgramAtlas.h"
++
++#include <unistd.h>
++
++////////////////////////////////////////////////////////////////////////////////////
++//  This is necessary to create symbols in the final library libhwui 
++//  required for program_binary_builder:
++//  _ZN7android10uirenderer12ProgramAtlas14createProgramsEPlPi
++//  _ZN7android10uirenderer12ProgramAtlas28loadProgramBinariesAndDeleteEPliPvi
++//  _ZN7android10uirenderer12ProgramAtlas9terminateEv
++////////////////////////////////////////////////////////////////////////////////////
++
++extern "C" {
++    int android::uirenderer::ProgramAtlas::createPrograms(int64_t* map, int* mapLength) {
++        return 0;
++    }
++    void android::uirenderer::ProgramAtlas::loadProgramBinariesAndDelete(int64_t* map, int mapLength, void* buffer, int length) {
++    }
++    void android::uirenderer::ProgramAtlas::terminate() {
++    }
++}
++
+diff --git a/libs/hwui/mediatek/MTKProgramAtlas.h b/libs/hwui/mediatek/MTKProgramAtlas.h
+new file mode 100644
+index 0000000..81ccac2
+--- /dev/null
++++ b/libs/hwui/mediatek/MTKProgramAtlas.h
+@@ -0,0 +1,90 @@
++/* Copyright Statement:
++ *
++ * This software/firmware and related documentation ("MediaTek Software") are
++ * protected under relevant copyright laws. The information contained herein is
++ * confidential and proprietary to MediaTek Inc. and/or its licensors. Without
++ * the prior written permission of MediaTek inc. and/or its licensors, any
++ * reproduction, modification, use or disclosure of MediaTek Software, and
++ * information contained herein, in whole or in part, shall be strictly
++ * prohibited.
++ *
++ * MediaTek Inc. (C) 2010. All rights reserved.
++ *
++ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
++ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER
++ * ON AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL
++ * WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR
++ * NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH
++ * RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
++ * INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES
++ * TO LOOK ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO.
++ * RECEIVER EXPRESSLY ACKNOWLEDGES THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO
++ * OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES CONTAINED IN MEDIATEK
++ * SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE
++ * RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
++ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S
++ * ENTIRE AND CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE
++ * RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE
++ * MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE
++ * CHARGE PAID BY RECEIVER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
++ *
++ * The following software/firmware and/or related documentation ("MediaTek
++ * Software") have been modified by MediaTek Inc. All revisions are subject to
++ * any receiver's applicable license agreements with MediaTek Inc.
++ */
++
++#ifndef ANDROID_HWUI_PROGRAM_ATLAS_H
++#define ANDROID_HWUI_PROGRAM_ATLAS_H
++
++#include <GLES2/gl2.h>
++#include <utils/KeyedVector.h>
++#include "../Program.h"
++
++namespace android {
++namespace uirenderer {
++
++class ProgramAtlas {
++public:
++
++struct ProgramEntry {
++        programid programKey;
++        void* binary;
++        GLint   binaryLength;
++        GLenum  binaryFormat;
++
++private:
++        ProgramEntry(programid key, void* b, GLint length, GLenum format):
++                programKey(key), binary(b), binaryLength(length), binaryFormat(format) {
++        }
++
++        ~ProgramEntry() {
++        }
++
++        friend class ProgramAtlas;
++    };
++
++    ProgramAtlas(): mProgramBinaries(NULL), mProgramLength(0), mProgramMap(NULL),
++            mEnableProgramBinaryService(false), mPorgramEntriesInitialized(false) { }
++    ~ProgramAtlas() {terminate(); }
++    void init();
++    ProgramEntry* getProgramEntry(programid key);
++    ANDROID_API void terminate();
++    ANDROID_API int createPrograms(int64_t* map, int* mapLength);
++    ANDROID_API void loadProgramBinariesAndDelete(int64_t* map, int mapLength, void* buffer, int length);
++    bool getServiceEnabled() { return mEnableProgramBinaryService; };
++
++private:
++    void* mProgramBinaries;
++    int mProgramLength;
++    int64_t* mProgramMap;
++    KeyedVector<programid, ProgramEntry*> mProgramEntries;
++    bool mEnableProgramBinaryService;
++    bool mPorgramEntriesInitialized;
++
++};// class ProgramAtlas
++}; // namespace uirenderer
++}; // namespace android
++
++#endif
+-- 
+2.7.4
+

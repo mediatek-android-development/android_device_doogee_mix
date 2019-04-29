@@ -1,0 +1,25 @@
+==========================
+
+- Create vendor:
+
+cd ~/LOS/device/Santin/N1
+. extract-files.sh         ### or . extract-files.sh unzip
+
+- Aplay patches:
+
+cd ~/LOS
+sh device/doogee/mix/patches/apply.sh
+
+- Make:
+
+cd ~/LOS
+. build/envsetup.sh && brunch mix
+
+==========================
+
+
+
+TODO:
+
+1. We need to change pixel for to bgra from rgba.
+2. How to make a restart ril-proxy?
